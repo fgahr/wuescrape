@@ -44,12 +44,12 @@ type session struct {
 	debug             bool
 }
 
-func newSession(debug bool) *session {
+func newSession(printDebugInfo bool) *session {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "unable to create session cookie jar"))
 	}
-	return &session{nil, 1, "", nil, &http.Client{Jar: jar}, debug}
+	return &session{nil, 1, "", nil, &http.Client{Jar: jar}, printDebugInfo}
 }
 
 func (s *session) printDebugInfo() {
@@ -65,6 +65,10 @@ func (s *session) printDebugInfo() {
 		fmt.Fprintln(os.Stderr, c)
 	}
 	fmt.Fprintln(os.Stderr, "### END DEBUG ##############################")
+}
+
+func (s *session) flowExecKey() string {
+	return fmt.Sprintf("e1s%d", s.flowID)
 }
 
 func (s *session) get(url string) (*http.Response, error) {
@@ -91,7 +95,7 @@ func (s *session) postForm(url string, data url.Values) (*http.Response, error) 
 func (s *session) flowURL() string {
 	return fmt.Sprintf("%s?%s", searchURL, url.Values{
 		"_flowId":           {"searchCourseNonStaff-flow"},
-		"_flowExecutionKey": {"e1s1"},
+		"_flowExecutionKey": {s.flowExecKey()},
 	}.Encode())
 }
 
@@ -143,17 +147,12 @@ const (
 	termSelectField     = "genericSearchMask:search_e4ff321960e251186ac57567bec9f4ce:cm_exa_eventprocess_basic_data:fieldset:inputField_3_abb156a1126282e4cf40d48283b4e76d:idabb156a1126282e4cf40d48283b4e76d:termSelect"
 	termSelctInputField = "genericSearchMask:search_e4ff321960e251186ac57567bec9f4ce:cm_exa_eventprocess_basic_data:fieldset:inputField_3_abb156a1126282e4cf40d48283b4e76d:idabb156a1126282e4cf40d48283b4e76d:termSelectInput"
 
-	submitSearch = "genericSearchMask_SUBMIT"
-	viewState    = "javax.faces.ViewState"
+	submitSearchMask = "genericSearchMask_SUBMIT"
+	submitSearchRes  = "genSearchRes_SUBMIT"
+	viewState        = "javax.faces.ViewState"
 
-	searchMaskID = "genericSearchMask:search_e4ff321960e251186ac57567bec9f4ce:cm_exa_eventprocess_basic_data:fieldset:inputField_0_1ad08e26bde39c9e4f1833e56dcce9b5:id1ad08e26bde39c9e4f1833e56dcce9b5"
-
-	// TODO: necessary?
-	navi1NumRows   = "genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9NaviNumRowsInput"
-	navi2NumRows   = "genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9Navi2NumRowsInput"
-	naviAboveTable = "genSearchRes:id3df798d58b4bacd9:j_id_5q_l_hk_11:j_id_5q_l_hk_83:j_id_5q_l_hk_87"
-	naviBelowTable = "genSearchRes:id3df798d58b4bacd9:j_id_5q_l_hk_11:j_id_5q_l_hk_83:j_id_5q_l_hk_89"
-	tableColumns   = "genSearchRes:id3df798d58b4bacd9:j_id_5q_l_hk_11:j_id_5q_l_hk_1b:cols"
+	navi1NumRows = "genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9NaviNumRowsInput"
+	navi2NumRows = "genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9Navi2NumRowsInput"
 
 	tablePageSize = "genSearchRes:id3df798d58b4bacd9:j_id_5q_l_hk_11:j_id_5q_l_hk_ar:defaultTablePageSize"
 )
@@ -165,38 +164,14 @@ func (s *session) submitSearch(input string, sem semester) {
 
 	s.printDebugInfo()
 
-	// POST is forwarded to a GET request with the search results
 	resp, err := s.postForm(s.flowURL(), url.Values{
-		"activePageElementId":    {searchMaskID},
-		"refreshButtonClickedId": {""},
-		"navigationPosition":     {"studiesOffered,searchCourses"},
-		authToken:                {s.authenticityToken},
-		"autoScroll":             {"0,0"},
-		navi1NumRows:             {"300"},
-		navi2NumRows:             {"300"},
-		searchField:              {input},
-		termSelectField:          {sem.fmtSelect()},
-		termSelctInputField:      {sem.fmtSelectInput()},
-		tableColumns: {
-			"ActionsBefore",
-			"sul.common.Unit.elementnr",
-			"sul.plan.searchLecture.veranstTitle",
-			"sul.common.Course.eventtypeId",
-			"cm.exa.eventprocess.responsible_instructor",
-			"cm.exa.eventprocess.instructor",
-			"cm.exa.Unit.Orgunit",
-			"ActionsAfter",
-		},
-		naviAboveTable:            {"true"},
-		naviBelowTable:            {"false"},
-		tablePageSize:             {"300"},
-		submitSearch:              {"1"},
-		viewState:                 {"e1s1"},
-		"SCROLL_TO_ANCHOR":        {},
-		"DISABLE_AUTOSCROLL":      {"true"},
-		"DISABLE_VALIDATION":      {"true"},
+		authToken:                 {s.authenticityToken},
+		searchField:               {input},
+		termSelectField:           {sem.fmtSelect()},
+		termSelctInputField:       {sem.fmtSelectInput()},
+		submitSearchMask:          {"1"},
+		viewState:                 {s.flowExecKey()},
 		"genericSearchMask:_idcl": {"genericSearchMask:buttonsBottom:search"},
-		"genSearchRes:_idcl":      {"genSearchRes:id3df798d58b4bacd9:j_id_5q_l_hk_11:save"},
 	})
 	if err != nil {
 		s.err = errors.Wrap(err, "failed to submit search parameters")
@@ -204,34 +179,43 @@ func (s *session) submitSearch(input string, sem semester) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Fprintln(os.Stderr, resp.Request)
+	// text, err := ioutil.ReadAll(resp.Body)
+	// if err != nil {
+	// 	s.err = errors.Wrap(err, "failed to read search results")
+	// 	return
+	// }
+	// fmt.Println(string(text))
 
-	text, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		s.err = errors.Wrap(err, "failed to read search results")
-		return
-	}
-	fmt.Println(string(text))
+	s.flowID++
 }
 
-func (s *session) viewSearchResults() {
+func (s *session) enlargeResultTable() {
 	if s.err != nil {
 		return
 	}
 
 	s.printDebugInfo()
-	resp, err := s.get(s.flowURL())
+
+	resp, err := s.postForm(s.flowURL(), url.Values{
+		authToken: {s.authenticityToken},
+		// 300 is the maximum result table size
+		navi1NumRows:    {"300"},
+		navi2NumRows:    {"300"},
+		tablePageSize:   {"300"},
+		submitSearchRes: {"1"},
+		viewState:       {s.flowExecKey()},
+	})
 	if err != nil {
-		s.err = errors.Wrap(err, "failed to retrieve search results")
+		s.err = errors.Wrap(err, "failed to submit table preferences")
 		return
 	}
 	defer resp.Body.Close()
 
+	// TODO: Remove
 	text, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		s.err = errors.Wrap(err, "failed to read search results")
 		return
 	}
-
 	fmt.Println(string(text))
 }

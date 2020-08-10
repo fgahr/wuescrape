@@ -37,6 +37,7 @@ func run() error {
 	}
 
 	s.submitSearch(searchTerm, sem)
+	s.enlargeResultTable()
 
 	return s.err
 }
