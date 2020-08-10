@@ -2,29 +2,69 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type semester struct {
-	winter bool
-	year   int
+	kind int // summer = 1, winter = 2
+	year int
 }
 
 func parseSemester(s string) (semester, error) {
-	// TODO
-	return semester{true, 2020}, nil
+	var year int
+	var kind int
+	var semesterIndicator string
+	n, err := fmt.Sscanf(s, "%4d%s", &year, &semesterIndicator)
+	if err != nil || n < 2 {
+		return semester{}, errors.Errorf("malformed argument: %s", s)
+	}
+
+	semesterIndicator = strings.ToLower(semesterIndicator)
+	if semesterIndicator == "s" {
+		kind = 1
+	} else if semesterIndicator == "w" {
+		kind = 2
+	} else {
+		return semester{}, errors.Errorf("malformed argument: %s", s)
+	}
+
+	return semester{kind, year}, nil
 }
 
 func (s semester) fmtSelect() string {
-	return "eq|2|2020"
+	return fmt.Sprintf("eq|%d|%d", s.kind, s.year)
 }
 
 func (s semester) fmtSelectInput() string {
-	// TODO
-	return "Wintersemester+2020"
+	var sem string
+	if s.kind == 1 {
+		sem = "Sommersemester"
+	} else if s.kind == 2 {
+		sem = "Wintersemester"
+	} else {
+		log.Fatalf("invalid semester: %v", s)
+	}
+	return fmt.Sprintf("%s+%d", sem, s.year)
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "%s: [term] [semester]\n", os.Args[0])
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "    term         any valid wuestudy search pattern")
+	fmt.Fprintln(os.Stderr, "    semester     yyyy(s|w), e.g. 2020W for winter semester 2020")
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "NOTE: only 300 search results can be shown")
 }
 
 func run() error {
+	if len(os.Args) < 3 {
+		usage()
+		os.Exit(1)
+	}
 	searchTerm := os.Args[1]
 	semester := os.Args[2]
 
