@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -11,6 +12,8 @@ import (
 )
 
 type searchResult struct {
+	// Whether details have been added, not for output
+	detailsAdded   bool
 	number         string
 	title          string
 	kind           string
@@ -20,20 +23,29 @@ type searchResult struct {
 	sws            string
 	link           string
 	parallelGroups string
-	detailLink     string
+	// The link to the details page, not for output
+	detailPageLink string
 }
 
-func writeResultHeader(w io.Writer) {
-	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s|%s|%s\n",
+func writeResultHeader(w io.Writer, detailsAdded bool) {
+	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s",
 		"Nummer", "Veranstaltungstitel", "Veranstaltungsart",
-		"Dozent/-in (verantw.)", "Dozent/-in (durchf.)", "Organisationseinheit",
-		"SWS", "Link")
+		"Dozent/-in (verantw.)", "Dozent/-in (durchf.)", "Organisationseinheit")
+	if detailsAdded {
+		fmt.Fprintf(w, "|%s|%s\n", "SWS", "Link")
+	} else {
+		fmt.Fprintln(w)
+	}
 }
 
 func (r *searchResult) writeAsCSVRow(w io.Writer) {
-	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s|%s|%s\n",
-		r.number, r.title, r.kind, r.respTeacher, r.execTeacher,
-		r.unit, r.sws, r.link)
+	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s",
+		r.number, r.title, r.kind, r.respTeacher, r.execTeacher, r.unit)
+	if r.detailsAdded {
+		fmt.Fprintf(w, "|%s|%s\n", r.sws, r.link)
+	} else {
+		fmt.Fprintln(w)
+	}
 }
 
 const (
@@ -84,19 +96,29 @@ func (s semester) fmtSelectInput() string {
 }
 
 func printUsage() {
-	fmt.Fprintf(os.Stderr, "%s: [pattern] [semester]\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "%s [opts] <pattern> <semester>\n", os.Args[0])
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "    pattern      any valid wuestudy search pattern")
-	fmt.Fprintln(os.Stderr, "    semester     yyyy(s|w), e.g. 2020W for winter semester 2020")
+	fmt.Fprintln(os.Stderr, "  pattern")
+	fmt.Fprintln(os.Stderr, "      any valid wuestudy search pattern")
+	fmt.Fprintln(os.Stderr, "  semester")
+	fmt.Fprintln(os.Stderr, "      yyyy(s|w), e.g. 2020W for winter semester 2020")
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Available options:")
+	flag.PrintDefaults()
 }
 
 func run() error {
-	if len(os.Args) < 3 {
+	flag.Usage = printUsage
+	detailp := flag.Bool("details", false, "fetch additional course details (may cause slowdown)")
+	flag.Parse()
+	args := flag.Args()
+
+	if len(args) != 2 {
 		printUsage()
 		os.Exit(1)
 	}
-	searchTerm := os.Args[1]
-	semester := os.Args[2]
+	searchTerm := args[0]
+	semester := args[1]
 
 	sem, err := parseSemester(semester)
 	if err != nil {
@@ -109,7 +131,10 @@ func run() error {
 	s.submitSearch(searchTerm, sem)
 	s.getSearchResultDocument()
 	results := s.extractResultData()
-	s.addDetails(results)
+	if *detailp {
+		s.addDetails(results)
+	}
+
 	if s.err != nil {
 		return s.err
 	}
@@ -119,7 +144,7 @@ func run() error {
 		return nil
 	}
 
-	writeResultHeader(os.Stdout)
+	writeResultHeader(os.Stdout, *detailp)
 	for _, r := range results {
 		r.writeAsCSVRow(os.Stdout)
 	}

@@ -239,7 +239,7 @@ func (s *session) extractResults() []*searchResult {
 
 			switch class {
 			case "smallestPossible singleLine column0":
-				result.detailLink = td.Find("a").AttrOr("href", "")
+				result.detailPageLink = td.Find("a").AttrOr("href", "")
 			case " column1":
 				result.number = plainContent(td)
 			case " column2":
@@ -340,12 +340,14 @@ func (s *session) addDetails(results []*searchResult) {
 }
 
 func (s *session) addResultDetail(res *searchResult) {
-	if res.detailLink == "" {
+	res.detailsAdded = true
+
+	if res.detailPageLink == "" {
 		return
 	}
 
 	// detail links are of the form /qisserver/..
-	resp, err := s.get(baseURL + res.detailLink)
+	resp, err := s.get(baseURL + res.detailPageLink)
 	if err != nil {
 		log.Println(err)
 		return
