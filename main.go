@@ -74,9 +74,9 @@ func (s semester) fmtSelectInput() string {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "%s: [term] [semester]\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "%s: [pattern] [semester]\n", os.Args[0])
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "    term         any valid wuestudy search pattern")
+	fmt.Fprintln(os.Stderr, "    pattern      any valid wuestudy search pattern")
 	fmt.Fprintln(os.Stderr, "    semester     yyyy(s|w), e.g. 2020W for winter semester 2020")
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "NOTE: only 300 search results can be shown")
