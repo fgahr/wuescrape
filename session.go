@@ -226,12 +226,7 @@ func (s *session) extractResultData() []*searchResult {
 	}
 
 	tableBody := s.document.Find("table").FilterFunction(func(_ int, sel *goquery.Selection) bool {
-		id, ok := sel.Attr("id")
-		if !ok {
-			return false
-		}
-		// search result table ID
-		return id == "genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9Table"
+		return sel.AttrOr("id", "") == "genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9Table"
 	}).Find("tbody")
 
 	resultData := make([]*searchResult, 0)
@@ -301,5 +296,13 @@ func (s *session) addResultDetail(res *searchResult) {
 	}
 	defer resp.Body.Close()
 
-	// TODO
+	doc, err := goquery.NewDocumentFromResponse(resp)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	res.sws = doc.Find("div").FilterFunction(func(_ int, sel *goquery.Selection) bool {
+		return sel.AttrOr("id", "") == "109dced638ab3377d8214df3f0097fdd"
+	}).First().Text()
 }
