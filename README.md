@@ -26,10 +26,4 @@ Available options:
 
 ## Output
 
-Output is pipe (`|`) separated CSV data with a header row:
-
-```text
-$ wuescrape "*" 2020W
-Nummer|Veranstaltungstitel|Veranstaltungsart|Dozent/-in (verantw.)|Dozent/-in (durchf.)|Organisationseinheit|SWS|Link
-... 300 output lines omitted ...
-```
+Output is pipe (`|`) separated CSV data with a header row.
