@@ -20,8 +20,7 @@ wuescrape: [pattern] [semester]
 NOTE: only 300 search results can be shown
 ```
 
-The 300 result limitation is -- sadly -- real for now due to the heavy use
-of javascript in the way wuestudy handles search data.
+The 300 result limitation is currently real but may be resolved soon.
 
 ## Output
 
