@@ -18,25 +18,31 @@ type searchResult struct {
 	execTeacher    string
 	unit           string
 	sws            string
-	links          string
+	link           string
 	parallelGroups string
 	detailLink     string
 }
 
 func writeResultHeader(w io.Writer) {
-	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s|%s\n",
+	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s|%s|%s\n",
 		"Nummer", "Veranstaltungstitel", "Veranstaltungsart",
 		"Dozent/-in (verantw.)", "Dozent/-in (durchf.)", "Organisationseinheit",
-		"SWS")
+		"SWS", "Link")
 }
 
 func (r *searchResult) writeAsCSVRow(w io.Writer) {
-	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s|%s\n",
-		r.number, r.title, r.kind, r.respTeacher, r.execTeacher, r.unit, r.sws)
+	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s|%s|%s\n",
+		r.number, r.title, r.kind, r.respTeacher, r.execTeacher,
+		r.unit, r.sws, r.link)
 }
 
+const (
+	summer = 1
+	winter = 2
+)
+
 type semester struct {
-	kind int // summer = 1, winter = 2
+	kind int
 	year int
 }
 
@@ -51,9 +57,9 @@ func parseSemester(s string) (semester, error) {
 
 	semesterIndicator = strings.ToLower(semesterIndicator)
 	if semesterIndicator == "s" {
-		kind = 1
+		kind = summer
 	} else if semesterIndicator == "w" {
-		kind = 2
+		kind = winter
 	} else {
 		return semester{}, errors.Errorf("malformed argument: %s", s)
 	}
@@ -77,7 +83,7 @@ func (s semester) fmtSelectInput() string {
 	return fmt.Sprintf("%s+%d", sem, s.year)
 }
 
-func usage() {
+func printUsage() {
 	fmt.Fprintf(os.Stderr, "%s: [pattern] [semester]\n", os.Args[0])
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "    pattern      any valid wuestudy search pattern")
@@ -88,7 +94,7 @@ func usage() {
 
 func run() error {
 	if len(os.Args) < 3 {
-		usage()
+		printUsage()
 		os.Exit(1)
 	}
 	searchTerm := os.Args[1]
@@ -99,7 +105,7 @@ func run() error {
 		return err
 	}
 
-	s := newSession(true)
+	s := newSession(false)
 	s.establish()
 
 	s.submitSearch(searchTerm, sem)
@@ -125,6 +131,7 @@ func run() error {
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		printUsage()
 		os.Exit(1)
 	}
 }

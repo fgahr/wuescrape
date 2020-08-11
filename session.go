@@ -7,6 +7,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pkg/errors"
@@ -264,22 +265,22 @@ func (s *session) extractResultData() []*searchResult {
 func (s *session) addDetailInfo(results []*searchResult) {
 	concurrencyLimit := 50
 	semaphore := make(chan struct{}, concurrencyLimit)
-	finished := make(chan struct{})
+	done := make(chan struct{})
 	started := 0
 
 	for _, res := range results {
-		go func(r *searchResult, done chan<- struct{}) {
+		go func(r *searchResult) {
 			semaphore <- struct{}{}
 			s.addResultDetail(r)
 			<-semaphore
 			done <- struct{}{}
-		}(res, finished)
+		}(res)
 		started++
 	}
 
-	// Make sure all goroutines are done
+	// Make sure all goroutines are finished
 	for i := 0; i < started; i++ {
-		<-finished
+		<-done
 	}
 }
 
@@ -305,4 +306,20 @@ func (s *session) addResultDetail(res *searchResult) {
 	res.sws = doc.Find("div").FilterFunction(func(_ int, sel *goquery.Selection) bool {
 		return sel.AttrOr("id", "") == "109dced638ab3377d8214df3f0097fdd"
 	}).First().Text()
+	// This field has been known to include gratuitous linebreaks
+	res.sws = strings.TrimSpace(res.sws)
+
+	res.link = doc.Find("a").FilterFunction(func(_ int, sel *goquery.Selection) bool {
+		href, ok := sel.Attr("href")
+		if !ok {
+			return false
+		}
+
+		// Non-course links are relative and start with a slash
+		return strings.HasPrefix(href, "https://") &&
+			strings.Contains(href, "uni-wuerzburg.de") &&
+			// For course links the full link is included as text as well
+			strings.TrimSpace(href) == strings.TrimSpace(sel.Text())
+	}).First().AttrOr("href", "")
+	res.link = strings.TrimSpace(res.link)
 }
