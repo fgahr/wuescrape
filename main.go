@@ -90,17 +90,18 @@ func run() error {
 	searchTerm := os.Args[1]
 	semester := os.Args[2]
 
-	s := newSession(false)
-	s.establish()
-
 	sem, err := parseSemester(semester)
 	if err != nil {
 		return err
 	}
 
+	s := newSession(true)
+	s.establish()
+
 	s.submitSearch(searchTerm, sem)
 	s.getSearchResultDocument()
 	results := s.extractResultData()
+	s.addDetailInfo(results)
 	if s.err != nil {
 		return s.err
 	}

@@ -265,3 +265,41 @@ func (s *session) extractResultData() []*searchResult {
 
 	return resultData
 }
+
+func (s *session) addDetailInfo(results []*searchResult) {
+	concurrencyLimit := 50
+	semaphore := make(chan struct{}, concurrencyLimit)
+	finished := make(chan struct{})
+	started := 0
+
+	for _, res := range results {
+		go func(r *searchResult, done chan<- struct{}) {
+			semaphore <- struct{}{}
+			s.addResultDetail(r)
+			<-semaphore
+			done <- struct{}{}
+		}(res, finished)
+		started++
+	}
+
+	// Make sure all goroutines are done
+	for i := 0; i < started; i++ {
+		<-finished
+	}
+}
+
+func (s *session) addResultDetail(res *searchResult) {
+	if res.detailLink == "" {
+		return
+	}
+
+	// detail links are of the form /qisserver/..
+	resp, err := s.get(baseURL + res.detailLink)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// TODO
+}
