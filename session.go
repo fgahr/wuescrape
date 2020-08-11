@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
@@ -37,6 +36,7 @@ func sURL() *url.URL {
 
 type session struct {
 	err               error
+	document          *goquery.Document
 	flowID            int
 	authenticityToken string
 	cookies           []*http.Cookie
@@ -49,7 +49,11 @@ func newSession(printDebugInfo bool) *session {
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "unable to create session cookie jar"))
 	}
-	return &session{nil, 1, "", nil, &http.Client{Jar: jar}, printDebugInfo}
+	return &session{
+		flowID: 1,
+		client: &http.Client{Jar: jar},
+		debug:  printDebugInfo,
+	}
 }
 
 func (s *session) printDebugInfo() {
@@ -179,17 +183,10 @@ func (s *session) submitSearch(input string, sem semester) {
 	}
 	defer resp.Body.Close()
 
-	// text, err := ioutil.ReadAll(resp.Body)
-	// if err != nil {
-	// 	s.err = errors.Wrap(err, "failed to read search results")
-	// 	return
-	// }
-	// fmt.Println(string(text))
-
 	s.flowID++
 }
 
-func (s *session) enlargeResultTable() {
+func (s *session) getSearchResultDocument() {
 	if s.err != nil {
 		return
 	}
@@ -211,11 +208,60 @@ func (s *session) enlargeResultTable() {
 	}
 	defer resp.Body.Close()
 
-	// TODO: Remove
-	text, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		s.err = errors.Wrap(err, "failed to read search results")
-		return
+	s.document, s.err = goquery.NewDocumentFromResponse(resp)
+}
+
+func plainContent(td *goquery.Selection) string {
+	// td.RemoveFiltered("span")
+	return td.Text()
+}
+
+func (s *session) extractResultData() []searchResult {
+	if s.err != nil {
+		return nil
 	}
-	fmt.Println(string(text))
+
+	if s.document == nil {
+		log.Fatal("document missing but no error encountered")
+	}
+
+	tableBody := s.document.Find("table").FilterFunction(func(_ int, sel *goquery.Selection) bool {
+		id, ok := sel.Attr("id")
+		if !ok {
+			return false
+		}
+		// search result table ID
+		return id == "genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9Table"
+	}).Find("tbody")
+
+	rows := make([]searchResult, 0)
+	tableBody.Find("tr").Each(func(_ int, tds *goquery.Selection) {
+		row := searchResult{}
+		tds.Find("td").Each(func(_ int, td *goquery.Selection) {
+			class, ok := td.Attr("class")
+			if !ok {
+				return
+			}
+
+			switch class {
+			case "smallestPossible singleLine column0":
+				row.detailLink = td.Find("a").AttrOr("href", "")
+			case " column1":
+				row.number = plainContent(td)
+			case " column2":
+				row.title = td.Find("button").Find("span").Text()
+			case " column3":
+				row.kind = plainContent(td)
+			case " column4":
+				row.respTeacher = plainContent(td)
+			case " column5":
+				row.execTeacher = plainContent(td)
+			case " column6":
+				row.unit = plainContent(td)
+			}
+		})
+		rows = append(rows, row)
+	})
+
+	return rows
 }

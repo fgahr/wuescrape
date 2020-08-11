@@ -2,12 +2,34 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/pkg/errors"
 )
+
+type searchResult struct {
+	number         string
+	title          string
+	kind           string
+	respTeacher    string
+	execTeacher    string
+	unit           string
+	sws            string
+	links          string
+	parallelGroups string
+	detailLink     string
+}
+
+func writeResultHeader(w io.Writer) {
+	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s\n", "Nummer", "Veranstaltungstitel", "Veranstaltungsart", "Dozent/-in (verantw.)", "Dozent/-in (durchf.)", "Organisationseinheit")
+}
+
+func (r searchResult) writeAsCSVRow(w io.Writer) {
+	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s\n", r.number, r.title, r.kind, r.respTeacher, r.execTeacher, r.unit)
+}
 
 type semester struct {
 	kind int // summer = 1, winter = 2
@@ -77,9 +99,22 @@ func run() error {
 	}
 
 	s.submitSearch(searchTerm, sem)
-	s.enlargeResultTable()
+	s.getSearchResultDocument()
+	results := s.extractResultData()
+	if s.err != nil {
+		return s.err
+	}
 
-	return s.err
+	if len(results) == 0 {
+		return errors.New("no results found")
+	}
+
+	writeResultHeader(os.Stdout)
+	for _, r := range results {
+		r.writeAsCSVRow(os.Stdout)
+	}
+
+	return nil
 }
 
 func main() {
