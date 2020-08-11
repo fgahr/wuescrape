@@ -262,7 +262,7 @@ func (s *session) extractResultData() []*searchResult {
 	return resultData
 }
 
-func (s *session) addDetailInfo(results []*searchResult) {
+func (s *session) addDetails(results []*searchResult) {
 	concurrencyLimit := 50
 	semaphore := make(chan struct{}, concurrencyLimit)
 	done := make(chan struct{})

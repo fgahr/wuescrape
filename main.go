@@ -111,7 +111,7 @@ func run() error {
 	s.submitSearch(searchTerm, sem)
 	s.getSearchResultDocument()
 	results := s.extractResultData()
-	s.addDetailInfo(results)
+	s.addDetails(results)
 	if s.err != nil {
 		return s.err
 	}
