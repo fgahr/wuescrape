@@ -216,7 +216,7 @@ func plainContent(td *goquery.Selection) string {
 	return td.Text()
 }
 
-func (s *session) extractResultData() []searchResult {
+func (s *session) extractResultData() []*searchResult {
 	if s.err != nil {
 		return nil
 	}
@@ -234,9 +234,9 @@ func (s *session) extractResultData() []searchResult {
 		return id == "genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9Table"
 	}).Find("tbody")
 
-	rows := make([]searchResult, 0)
+	resultData := make([]*searchResult, 0)
 	tableBody.Find("tr").Each(func(_ int, tds *goquery.Selection) {
-		row := searchResult{}
+		result := searchResult{}
 		tds.Find("td").Each(func(_ int, td *goquery.Selection) {
 			class, ok := td.Attr("class")
 			if !ok {
@@ -245,23 +245,23 @@ func (s *session) extractResultData() []searchResult {
 
 			switch class {
 			case "smallestPossible singleLine column0":
-				row.detailLink = td.Find("a").AttrOr("href", "")
+				result.detailLink = td.Find("a").AttrOr("href", "")
 			case " column1":
-				row.number = plainContent(td)
+				result.number = plainContent(td)
 			case " column2":
-				row.title = td.Find("button").Find("span").Text()
+				result.title = td.Find("button").Find("span").Text()
 			case " column3":
-				row.kind = plainContent(td)
+				result.kind = plainContent(td)
 			case " column4":
-				row.respTeacher = plainContent(td)
+				result.respTeacher = plainContent(td)
 			case " column5":
-				row.execTeacher = plainContent(td)
+				result.execTeacher = plainContent(td)
 			case " column6":
-				row.unit = plainContent(td)
+				result.unit = plainContent(td)
 			}
 		})
-		rows = append(rows, row)
+		resultData = append(resultData, &result)
 	})
 
-	return rows
+	return resultData
 }

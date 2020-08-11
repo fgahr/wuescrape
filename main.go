@@ -27,7 +27,7 @@ func writeResultHeader(w io.Writer) {
 	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s\n", "Nummer", "Veranstaltungstitel", "Veranstaltungsart", "Dozent/-in (verantw.)", "Dozent/-in (durchf.)", "Organisationseinheit")
 }
 
-func (r searchResult) writeAsCSVRow(w io.Writer) {
+func (r *searchResult) writeAsCSVRow(w io.Writer) {
 	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s\n", r.number, r.title, r.kind, r.respTeacher, r.execTeacher, r.unit)
 }
 
