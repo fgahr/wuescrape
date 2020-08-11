@@ -1,5 +1,13 @@
 # A Webscraper for Wuestudy Course Data
 
+## Installation
+
+With the go toolchain set up, simply
+
+```text
+go get -u github.com/fgahr/wuescrape
+```
+
 ## Overview
 
 ```text
