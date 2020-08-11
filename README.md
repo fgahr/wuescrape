@@ -12,10 +12,16 @@ go get -u github.com/fgahr/wuescrape
 
 ```text
 $ wuescrape
-wuescrape: [pattern] [semester]
+wuescrape [opts] <pattern> <semester>
 
-    pattern      any valid wuestudy search pattern
-    semester     yyyy(s|w), e.g. 2020W for winter semester 2020
+  pattern
+    	any valid wuestudy search pattern
+  semester
+    	yyyy(s|w), e.g. 2020W for winter semester 2020
+
+Available options:
+  -details
+    	fetch additional course details (may cause slowdown)
 ```
 
 ## Output
