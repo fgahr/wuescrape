@@ -16,11 +16,7 @@ wuescrape: [pattern] [semester]
 
     pattern      any valid wuestudy search pattern
     semester     yyyy(s|w), e.g. 2020W for winter semester 2020
-
-NOTE: only 300 search results can be shown
 ```
-
-The 300 result limitation is currently real but may be resolved soon.
 
 ## Output
 

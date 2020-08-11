@@ -52,7 +52,7 @@ func parseSemester(s string) (semester, error) {
 	var semesterIndicator string
 	n, err := fmt.Sscanf(s, "%4d%s", &year, &semesterIndicator)
 	if err != nil || n < 2 {
-		return semester{}, errors.Errorf("malformed argument: %s", s)
+		return semester{}, errors.Errorf("malformed semester argument: %s", s)
 	}
 
 	semesterIndicator = strings.ToLower(semesterIndicator)
@@ -61,7 +61,7 @@ func parseSemester(s string) (semester, error) {
 	} else if semesterIndicator == "w" {
 		kind = winter
 	} else {
-		return semester{}, errors.Errorf("malformed argument: %s", s)
+		return semester{}, errors.Errorf("malformed semester argument: %s", s)
 	}
 
 	return semester{kind, year}, nil
@@ -88,8 +88,6 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "    pattern      any valid wuestudy search pattern")
 	fmt.Fprintln(os.Stderr, "    semester     yyyy(s|w), e.g. 2020W for winter semester 2020")
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "NOTE: only 300 search results can be shown")
 }
 
 func run() error {
@@ -117,7 +115,8 @@ func run() error {
 	}
 
 	if len(results) == 0 {
-		return errors.New("no results found")
+		fmt.Fprintln(os.Stderr, "no results found")
+		return nil
 	}
 
 	writeResultHeader(os.Stdout)

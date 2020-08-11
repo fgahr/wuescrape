@@ -196,6 +196,8 @@ func (s *session) getSearchResultDocument() {
 
 	resp, err := s.postForm(s.flowURL(), url.Values{
 		authToken: {s.authenticityToken},
+		// NOTE: This may not be as much of an optimization as initially
+		// thought. It shouldn't hurt, though.
 		// 300 is the maximum result table size
 		navi1NumRows:    {"300"},
 		navi2NumRows:    {"300"},
@@ -209,21 +211,17 @@ func (s *session) getSearchResultDocument() {
 	}
 	defer resp.Body.Close()
 
+	// We save the document here to avoid unnecessary server round trips
 	s.document, s.err = goquery.NewDocumentFromResponse(resp)
 }
 
 func plainContent(td *goquery.Selection) string {
-	// td.RemoveFiltered("span")
 	return td.Text()
 }
 
-func (s *session) extractResultData() []*searchResult {
-	if s.err != nil {
-		return nil
-	}
-
+func (s *session) extractResults() []*searchResult {
 	if s.document == nil {
-		log.Fatal("document missing but no error encountered")
+		return nil
 	}
 
 	tableBody := s.document.Find("table").FilterFunction(func(_ int, sel *goquery.Selection) bool {
@@ -262,9 +260,66 @@ func (s *session) extractResultData() []*searchResult {
 	return resultData
 }
 
+func (s *session) hasMoreResults() bool {
+	if s.document == nil {
+		return false
+	}
+
+	return s.document.Find("a").FilterFunction(func(_ int, sel *goquery.Selection) bool {
+		return sel.AttrOr("id", "") == "genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9Navinext"
+	}).Length() > 0
+}
+
+func (s *session) loadNextPage() {
+	if s.err != nil {
+		return
+	}
+
+	if s.document == nil {
+		log.Fatal("need to submit search before extracting results")
+	}
+
+	resp, err := s.postForm(s.flowURL(), url.Values{
+		authToken:       {s.authenticityToken},
+		submitSearchRes: {"1"},
+		viewState:       {s.flowExecKey()},
+		"genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9Navi": {"next"},
+		"javax.faces.source": {"genSearchRes:id3df798d58b4bacd9:id3df798d58b4bacd9Navinext"},
+		"rfExt":              {"null"},
+		// Receiving a partial document is completely fine for our purposes
+		"javax.faces.partial.ajax":    {"true"},
+		"javax.faces.partial.execute": {"genSearchRes:id3df798d58b4bacd9 genSearchRes"},
+		"javax.faces.partial.render":  {"genSearchRes:id3df798d58b4bacd9 genSearchRes genSearchRes:messages-infobox"},
+		"genSearchRes":                {"genSearchRes"},
+	})
+	if err != nil {
+		s.err = errors.Wrap(err, "failed to submit table preferences")
+		return
+	}
+	defer resp.Body.Close()
+
+	s.document, s.err = goquery.NewDocumentFromResponse(resp)
+}
+
+func (s *session) extractResultData() []*searchResult {
+	if s.err != nil {
+		return nil
+	}
+
+	var results []*searchResult
+	// Iterate through result pages
+	for results = s.extractResults(); s.hasMoreResults(); {
+		s.loadNextPage()
+		results = append(results, s.extractResults()...)
+	}
+
+	return results
+}
+
 func (s *session) addDetails(results []*searchResult) {
-	concurrencyLimit := 50
-	semaphore := make(chan struct{}, concurrencyLimit)
+	// NOTE: connection-dependent, not optimized, just a guess.
+	concurrentFetchLimit := 50
+	semaphore := make(chan struct{}, concurrentFetchLimit)
 	done := make(chan struct{})
 	started := 0
 
