@@ -1,4 +1,4 @@
-# A Webscraper for Wuestudy Course Data
+# A Web Scraper for Wuestudy Course Data
 
 ## Installation
 
