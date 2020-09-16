@@ -137,8 +137,8 @@ func (s *session) establish() {
 	s.authenticityToken = authTkn
 
 	s.client.Jar.SetCookies(bURL(), []*http.Cookie{
-		&http.Cookie{Name: "download-complete", Value: ""},
-		&http.Cookie{Name: "sessionRefresh", Value: "0"},
+		{Name: "download-complete", Value: ""},
+		{Name: "sessionRefresh", Value: "0"},
 	})
 }
 
@@ -213,10 +213,6 @@ func (s *session) getSearchResultDocument() {
 	s.document, s.err = goquery.NewDocumentFromResponse(resp)
 }
 
-func plainContent(td *goquery.Selection) string {
-	return td.Text()
-}
-
 func (s *session) extractResults() []*searchResult {
 	if s.document == nil {
 		return nil
@@ -239,17 +235,17 @@ func (s *session) extractResults() []*searchResult {
 			case "smallestPossible singleLine column0":
 				result.detailPageLink = td.Find("a").AttrOr("href", "")
 			case " column1":
-				result.number = plainContent(td)
+				result.number = td.Text()
 			case " column2":
 				result.title = td.Find("button").Find("span").Text()
 			case " column3":
-				result.kind = plainContent(td)
+				result.kind = td.Text()
 			case " column4":
-				result.respTeacher = plainContent(td)
+				result.respTeacher = td.Text()
 			case " column5":
-				result.execTeacher = plainContent(td)
+				result.execTeacher = td.Text()
 			case " column6":
-				result.unit = plainContent(td)
+				result.unit = td.Text()
 			}
 		})
 		resultData = append(resultData, &result)
