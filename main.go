@@ -117,7 +117,8 @@ func printUsage() {
 
 func run() error {
 	flag.Usage = printUsage
-	detailp := flag.Bool("details", false, "fetch additional course details (may cause slowdown)")
+	var collectDetails bool
+	flag.BoolVar(&collectDetails, "details", false, "fetch additional course details (may cause slowdown)")
 	flag.Parse()
 	args := flag.Args()
 
@@ -139,7 +140,7 @@ func run() error {
 	s.submitSearch(searchTerm, sem)
 	s.getSearchResultDocument()
 	results := s.extractResultData()
-	if *detailp {
+	if collectDetails {
 		s.addDetails(results)
 	}
 
@@ -152,7 +153,7 @@ func run() error {
 		return nil
 	}
 
-	writeResultHeader(os.Stdout, *detailp)
+	writeResultHeader(os.Stdout, collectDetails)
 	for _, r := range results {
 		r.writeAsCSVRow(os.Stdout)
 	}
