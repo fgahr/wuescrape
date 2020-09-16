@@ -57,19 +57,26 @@ func newSession(printDebugInfo bool) *session {
 	}
 }
 
+func debugln(args ...interface{}) {
+	fmt.Fprintln(os.Stderr, args...)
+}
+
+func debugf(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format, args...)
+}
+
 func (s *session) printDebugInfo() {
 	if !s.debug {
 		return
 	}
 
-	fmt.Fprintln(os.Stderr, "### DEBUG ##################################")
-	fmt.Fprintf(os.Stderr, "error: %v\nauthenticity_token: %s\n",
-		s.err, s.authenticityToken)
-	fmt.Fprintln(os.Stderr, "## Cookies ##")
+	debugln("### DEBUG ##################################")
+	debugf("error: %v\nauthenticity_token: %s\n", s.err, s.authenticityToken)
+	debugln("## Cookies ##")
 	for _, c := range s.client.Jar.Cookies(sURL()) {
-		fmt.Fprintln(os.Stderr, c)
+		debugln(c)
 	}
-	fmt.Fprintln(os.Stderr, "### END DEBUG ##############################")
+	debugln("### END DEBUG ##############################")
 }
 
 func (s *session) flowExecKey() string {
@@ -78,21 +85,21 @@ func (s *session) flowExecKey() string {
 
 func (s *session) get(url string) (*http.Response, error) {
 	if s.debug {
-		fmt.Fprintln(os.Stderr, "### GET ####################################")
-		fmt.Fprintln(os.Stderr, url)
-		fmt.Fprintln(os.Stderr, "### END GET ################################")
+		debugln("### GET ####################################")
+		debugln(url)
+		debugln("### END GET ################################")
 	}
 	return s.client.Get(url)
 }
 
 func (s *session) postForm(url string, data url.Values) (*http.Response, error) {
 	if s.debug {
-		fmt.Fprintln(os.Stderr, "### POST ###################################")
-		fmt.Fprintln(os.Stderr, url)
+		debugln("### POST ###################################")
+		debugln(url)
 		for k, v := range data {
-			fmt.Fprintf(os.Stderr, "%s = %s\n", k, v)
+			debugf("%s = %s\n", k, v)
 		}
-		fmt.Fprintln(os.Stderr, "### END POST ###############################")
+		debugln("### END POST ###############################")
 	}
 	return s.client.PostForm(url, data)
 }
