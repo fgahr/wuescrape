@@ -27,6 +27,14 @@ type searchResult struct {
 	detailPageLink string
 }
 
+func msgln(args ...interface{}) {
+	fmt.Fprintln(os.Stderr, args...)
+}
+
+func msgf(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format, args...)
+}
+
 func writeResultHeader(w io.Writer, detailsAdded bool) {
 	fmt.Fprintf(w, "%s|%s|%s|%s|%s|%s",
 		"Nummer", "Veranstaltungstitel", "Veranstaltungsart",
@@ -96,14 +104,14 @@ func (s semester) fmtSelectInput() string {
 }
 
 func printUsage() {
-	fmt.Fprintf(os.Stderr, "%s [opts] <pattern> <semester>\n", os.Args[0])
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "  pattern")
-	fmt.Fprintln(os.Stderr, "    \tany valid wuestudy search pattern")
-	fmt.Fprintln(os.Stderr, "  semester")
-	fmt.Fprintln(os.Stderr, "    \tyyyy(s|w), e.g. 2020W for winter semester 2020")
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "Available options:")
+	msgf("usage: %s [opts] <pattern> <semester>\n", os.Args[0])
+	msgln()
+	msgln("  pattern")
+	msgln("    \tany valid wuestudy search pattern")
+	msgln("  semester")
+	msgln("    \tyyyy(s|w), e.g. 2020W for winter semester 2020")
+	msgln()
+	msgln("Available options:")
 	flag.PrintDefaults()
 }
 
@@ -140,7 +148,7 @@ func run() error {
 	}
 
 	if len(results) == 0 {
-		fmt.Fprintln(os.Stderr, "no results found")
+		msgln("no results found")
 		return nil
 	}
 
@@ -154,7 +162,7 @@ func run() error {
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		msgln(err)
 		printUsage()
 		os.Exit(1)
 	}

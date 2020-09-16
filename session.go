@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -57,26 +56,18 @@ func newSession(printDebugInfo bool) *session {
 	}
 }
 
-func debugln(args ...interface{}) {
-	fmt.Fprintln(os.Stderr, args...)
-}
-
-func debugf(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, format, args...)
-}
-
 func (s *session) printDebugInfo() {
 	if !s.debug {
 		return
 	}
 
-	debugln("### DEBUG ##################################")
-	debugf("error: %v\nauthenticity_token: %s\n", s.err, s.authenticityToken)
-	debugln("## Cookies ##")
+	msgln("### DEBUG ##################################")
+	msgf("error: %v\nauthenticity_token: %s\n", s.err, s.authenticityToken)
+	msgln("## Cookies ##")
 	for _, c := range s.client.Jar.Cookies(sURL()) {
-		debugln(c)
+		msgln(c)
 	}
-	debugln("### END DEBUG ##############################")
+	msgln("### END DEBUG ##############################")
 }
 
 func (s *session) flowExecKey() string {
@@ -85,21 +76,21 @@ func (s *session) flowExecKey() string {
 
 func (s *session) get(url string) (*http.Response, error) {
 	if s.debug {
-		debugln("### GET ####################################")
-		debugln(url)
-		debugln("### END GET ################################")
+		msgln("### GET ####################################")
+		msgln(url)
+		msgln("### END GET ################################")
 	}
 	return s.client.Get(url)
 }
 
 func (s *session) postForm(url string, data url.Values) (*http.Response, error) {
 	if s.debug {
-		debugln("### POST ###################################")
-		debugln(url)
+		msgln("### POST ###################################")
+		msgln(url)
 		for k, v := range data {
-			debugf("%s = %s\n", k, v)
+			msgf("%s = %s\n", k, v)
 		}
-		debugln("### END POST ###############################")
+		msgln("### END POST ###############################")
 	}
 	return s.client.PostForm(url, data)
 }
