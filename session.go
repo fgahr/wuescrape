@@ -328,7 +328,7 @@ func (s *session) addDetails(results []*searchResult) {
 	concurrentFetchLimit := 50
 	semaphore := make(chan struct{}, concurrentFetchLimit)
 	done := make(chan struct{})
-	started := 0
+	running := 0
 
 	for _, res := range results {
 		go func(r *searchResult) {
@@ -337,12 +337,13 @@ func (s *session) addDetails(results []*searchResult) {
 			<-semaphore
 			done <- struct{}{}
 		}(res)
-		started++
+		running++
 	}
 
 	// Make sure all goroutines are finished
-	for i := 0; i < started; i++ {
+	for running > 0 {
 		<-done
+		running--
 	}
 }
 
